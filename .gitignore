@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+.pytest_cache/
+build/
+dist/
+*.spec
+# Modelos de fala: grandes demais para o git. Veja modelos/ORIGEM.txt e o README.
+modelos/vosk-pt/
+modelos/sherpa-pt/

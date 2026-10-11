@@ -1,0 +1,11 @@
+Modelos de fala usados pelo Escriba
+
+vosk-pt/
+  vosk-model-small-pt-0.3, licença Apache 2.0.
+  https://alphacephei.com/vosk/models
+
+sherpa-pt/
+  Kroko-PT-Community-64-L-Streaming-001, modelo comunitário da Kroko ASR (Banafo),
+  licença CC-BY-SA. O arquivo .data original foi separado em encoder, decoder,
+  joiner e tokens, sem alteração do conteúdo.
+  https://huggingface.co/Banafo/Kroko-ASR
