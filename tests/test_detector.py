@@ -51,6 +51,125 @@ def test_citacoes(texto, esperado):
     assert str(ultima(texto)) == esperado
 
 
+@pytest.mark.parametrize("texto, esperado", [
+    # ordinal longe do livro
+    ("segunda carta de paulo aos coríntios quatro um", "2 Coríntios 4:1"),
+    ("primeira carta do apóstolo paulo a timóteo seis dez", "1 Timóteo 6:10"),
+    ("segunda epístola do apóstolo paulo aos tessalonicenses três", "2 Tessalonicenses 3"),
+    ("primeira carta de pedro cinco sete", "1 Pedro 5:7"),
+    ("primeira epístola universal de pedro cinco sete", "1 Pedro 5:7"),
+    ("primeira carta de joão um nove", "1 João 1:9"),
+    ("primeira epístola de são joão um nove", "1 João 1:9"),
+    ("segundo livro de samuel sete", "2 Samuel 7"),
+    ("primeiro livro dos reis dezoito", "1 Reis 18"),
+    ("segundo livro das crônicas sete catorze", "2 Crônicas 7:14"),
+    ("primeiro reis dezoito", "1 Reis 18"),
+    ("primeira samuel dezessete", "1 Samuel 17"),
+    ("primeiro samuel dezessete", "1 Samuel 17"),
+    ("segunda timóteo três dezesseis", "2 Timóteo 3:16"),
+    ("segunda a timóteo três dezesseis", "2 Timóteo 3:16"),
+    ("primeira tessalonicenses cinco dezessete", "1 Tessalonicenses 5:17"),
+    ("primeira pedro dois nove", "1 Pedro 2:9"),
+    ("segunda pedro três nove", "2 Pedro 3:9"),
+    ("segunda de pedro três nove", "2 Pedro 3:9"),
+    ("i coríntios treze", "1 Coríntios 13"),
+    ("ii timóteo três", "2 Timóteo 3"),
+    # nomes alternativos de livros
+    ("carta aos romanos oito vinte e oito", "Romanos 8:28"),
+    ("epístola aos hebreus onze um", "Hebreus 11:1"),
+    ("carta de tiago um cinco", "Tiago 1:5"),
+    ("evangelho de mateus cinco três", "Mateus 5:3"),
+    ("evangelho segundo mateus cinco três", "Mateus 5:3"),
+    ("evangelho de são lucas quinze", "Lucas 15"),
+    ("ato dos apóstolos dois", "Atos 2"),
+    ("o livro de atos dois quatro", "Atos 2:4"),
+    ("cântico dos cânticos dois", "Cantares 2"),
+    ("cantares de salomão dois", "Cantares 2"),
+    ("cântico de salomão dois", "Cantares 2"),
+    ("eclesiastes três um", "Eclesiastes 3:1"),
+    ("provérbios de salomão três cinco", "Provérbios 3:5"),
+    ("profeta isaías cinquenta e três", "Isaías 53"),
+    ("livro do profeta isaías cinquenta e três", "Isaías 53"),
+    ("profeta jeremias vinte e nove onze", "Jeremias 29:11"),
+    ("salmista no salmo noventa e um", "Salmos 91"),
+    ("salmo noventa e um", "Salmos 91"),
+    ("o salmo de número vinte e três", "Salmos 23"),
+    ("apocalipse de são joão três vinte", "Apocalipse 3:20"),
+    ("revelação três vinte", "Apocalipse 3:20"),
+    ("deuteronômio seis quatro", "Deuteronômio 6:4"),
+    ("habacuque dois quatro", "Habacuque 2:4"),
+    ("oséias seis seis", "Oseias 6:6"),
+    ("miquéias seis oito", "Miqueias 6:8"),
+    ("filemon seis", "Filemom 1:6"),
+    ("filémon seis", "Filemom 1:6"),
+    ("abdias quinze", "Obadias 1:15"),
+    ("naum um sete", "Naum 1:7"),
+    # formas de capítulo/versículo
+    ("joão no capítulo três verso dezesseis", "João 3:16"),
+    ("joão capítulo três a partir do versículo dezesseis", "João 3:16"),
+    ("joão três a partir do dezesseis", "João 3:16"),
+    ("joão três no versículo dezesseis", "João 3:16"),
+    ("joão três verso dezesseis", "João 3:16"),
+    ("joão três e dezesseis", "João 3:16"),
+    ("joão três dois pontos dezesseis", "João 3:16"),
+    ("joão capítulo terceiro", "João 3"),
+    ("no terceiro capítulo de joão", "João 3"),
+    ("no capítulo três de joão", "João 3"),
+    ("joão três versículo dezesseis", "João 3:16"),
+    ("joão três dezesseis em diante", "João 3:16"),
+    ("romanos doze do um ao dois", "Romanos 12:1-2"),
+    ("romanos doze um e dois", "Romanos 12:1"),
+    ("romanos doze um a dois", "Romanos 12:1-2"),
+    ("romanos doze versos um e dois", "Romanos 12:1"),
+    ("salmo cento e dezenove cento e cinco", "Salmos 119:105"),
+    ("salmos cento e cinquenta", "Salmos 150"),
+    ("isaías quarenta trinta e um", "Isaías 40:31"),
+    ("lucas quinze onze até trinta e dois", "Lucas 15:11-32"),
+    ("lucas quinze onze ao trinta e dois", "Lucas 15:11-32"),
+    ("versículo dezesseis de joão três", "João 3:16"),
+    ("joão três ponto dezesseis", "João 3:16"),
+    # o livro depois do capítulo ou do versículo
+    ("versículo dezesseis do capítulo três de joão", "João 3:16"),
+    ("capítulo três da primeira carta aos coríntios versículo quatro", "1 Coríntios 3:4"),
+    ("capítulo quatro da carta aos romanos", "Romanos 4"),
+    ("capítulo um de judas", "Judas 1"),
+    ("revelação capítulo três", "Apocalipse 3"),
+    ("evangelho segundo são joão três dezesseis", "João 3:16"),
+    ("são joão três dezesseis", "João 3:16"),
+    ("segundo paralipômenos sete catorze", "2 Crônicas 7:14"),
+    ("III João 4", "3 João 1:4"),
+])
+def test_variacoes_de_fala(texto, esperado):
+    assert str(ultima(texto)) == esperado
+
+
+@pytest.mark.parametrize("texto", [
+    "uma revelação três vezes maior",   # palavra comum só vale com capítulo e versículo
+    "a revelação de deus dois mil anos",
+    "o ato dois da peça",
+    "a revelação de joão",
+    "o apóstolo paulo disse a pedro três vezes",  # sem ordinal
+    "versículo três de joão",           # o "três" é o versículo, não "3 João"
+    "capítulo três e joão disse",
+    "o terceiro dia",
+    "esse é o ponto três",
+])
+def test_variacoes_ignoradas(texto):
+    assert ultima(texto) is None
+
+
+def test_capitulo_ordinal_e_versiculo_antes_do_capitulo_continuam_o_livro():
+    falas = [(0, "romanos oito"), (10, "no quarto capítulo"),
+             (20, "versículo dezesseis do capítulo três")]
+    assert falar(*falas) == ["Romanos 8", "Romanos 4", "Romanos 3:16"]
+
+
+def test_dois_pontos_corrige_o_parcial():
+    d = Detector()
+    assert str(d.ouvir("joão três dois", False, 0.0)) == "João 3:2"
+    assert str(d.ouvir("joão três dois pontos dezesseis", False, 0.3)) == "João 3:16"
+
+
 @pytest.mark.parametrize("texto", [
     "joão",                       # livro sozinho não vale
     "joão quarenta e cinco",      # João não tem capítulo 45
@@ -169,7 +288,9 @@ def test_ler():
 def test_vocabulario():
     palavras = vocabulario()
     assert {"joão", "três", "capítulo", "versículo", "e", "primeira"} <= set(palavras)
+    assert {"paulo", "apóstolo", "terceiro", "pontos", "revelação", "abdias"} <= set(palavras)
     assert not any(p.isdigit() for p in palavras)
+    assert "ii" not in palavras
 
 
 def test_referencia_e_comparavel():

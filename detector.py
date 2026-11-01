@@ -5,7 +5,7 @@ import re
 import unicodedata
 from dataclasses import dataclass
 
-from biblia import LIVROS, NOMES, NUMERADOS, SUFIXOS, VERSICULOS
+from biblia import FRACOS, LIVROS, NOMES, NUMERADOS, SUFIXOS, VERSICULOS
 
 UNIDADES = {"um": 1, "dois": 2, "três": 3, "quatro": 4, "cinco": 5, "seis": 6, "sete": 7,
             "oito": 8, "nove": 9}
@@ -16,15 +16,26 @@ DEZENAS = {"vinte": 20, "trinta": 30, "quarenta": 40, "cinquenta": 50, "sessenta
            "setenta": 70, "oitenta": 80, "noventa": 90}
 ORDINAIS = {"primeiro": 1, "primeira": 1, "segundo": 2, "segunda": 2, "terceiro": 3,
             "terceira": 3, "um": 1, "dois": 2, "três": 3, "1": 1, "2": 2, "3": 3}
+ROMANOS = {"i": 1, "ii": 2, "iii": 3}  # só no texto escrito ("II Timóteo"), nunca na fala
+# Ordinais de capítulo e versículo, só valem junto da marca ("capítulo terceiro", "terceiro capítulo").
+ORD_UNIDADES = {"primeiro": 1, "segundo": 2, "terceiro": 3, "quarto": 4, "quinto": 5, "sexto": 6,
+                "sétimo": 7, "oitavo": 8, "nono": 9}
+ORD_DEZENAS = {"décimo": 10, "vigésimo": 20, "trigésimo": 30, "quadragésimo": 40,
+               "quinquagésimo": 50, "sexagésimo": 60, "septuagésimo": 70, "setuagésimo": 70,
+               "octogésimo": 80, "nonagésimo": 90}
 CAPITULO = ("capítulo", "capítulos")
 VERSICULO = ("versículo", "versículos", "verso", "versos")
 # Ditas pouco antes do livro, valem o livro sozinho ("evangelho de João").
 GATILHOS = ("livro", "evangelho", "carta", "epístola", "abra", "abram", "abramos", "abrir")
-# Podem ficar entre o ordinal e o livro ("primeira carta aos Coríntios").
-CONECTIVOS = ("de", "do", "dos", "da", "a", "o", "ao", "aos", "livro", "carta", "epístola")
+# Podem ficar entre o ordinal e o livro ("segunda carta do apóstolo Paulo aos Coríntios").
+CONECTIVOS = ("de", "do", "dos", "da", "das", "a", "o", "as", "ao", "aos", "livro", "carta",
+              "epístola", "paulo", "apóstolo", "são", "universal")
 ATE = ("a", "ao", "até")
+# Ditas entre o capítulo e o versículo sem contar como palavra de fora ("três dois pontos dezesseis").
+PONTES = ("dois pontos", "ponto", "a partir do", "a partir de", "a partir da")
 
 FOLGA = 1  # palavras de fora toleradas entre o capítulo e o versículo ("três e dezesseis")
+DISTANCIA = 6  # palavras toleradas entre o ordinal e o livro, e entre "capítulo três" e o livro
 
 
 def normalizar(texto):
@@ -41,7 +52,9 @@ def _n(palavras):
 
 _UNIDADES, _DEZENAS = _n(UNIDADES), _n(DEZENAS)
 _ATE_19 = {**_UNIDADES, **_n(DEZ_A_19)}
-_ORDINAIS, _LIVROS, _NUMERADOS = _n(ORDINAIS), _n(LIVROS), _n(NUMERADOS)
+_ORDINAIS, _LIVROS, _NUMERADOS = {**_n(ORDINAIS), **ROMANOS}, _n(LIVROS), _n(NUMERADOS)
+_FRACOS, _ORD_UNIDADES, _ORD_DEZENAS = _n(FRACOS), _n(ORD_UNIDADES), _n(ORD_DEZENAS)
+_PONTES = [normalizar(p) for p in PONTES]
 _CAPITULO, _VERSICULO, _GATILHOS, _ATE = _n(CAPITULO), _n(VERSICULO), _n(GATILHOS), _n(ATE)
 _CONECTIVOS = _n(CONECTIVOS) | {"unk"}  # "[unk]" é o que o Vosk põe no lugar de palavra de fora
 _SUFIXOS = {livro: [normalizar(s) for s in sufixos] for livro, sufixos in SUFIXOS.items()}
@@ -49,10 +62,12 @@ _SUFIXOS = {livro: [normalizar(s) for s in sufixos] for livro, sufixos in SUFIXO
 
 def vocabulario():
     """Toda palavra que o detector entende, com acento, para restringir o motor de fala."""
-    palavras = {"e", "cem", "cento"}
-    for grupo in (UNIDADES, DEZ_A_19, DEZENAS, ORDINAIS, LIVROS, NUMERADOS, CAPITULO, VERSICULO,
-                  GATILHOS, CONECTIVOS, ATE):
+    palavras = {"e", "cem", "cento", "centésimo"}
+    for grupo in (UNIDADES, DEZ_A_19, DEZENAS, ORDINAIS, ORD_UNIDADES, ORD_DEZENAS, LIVROS,
+                  FRACOS, NUMERADOS, CAPITULO, VERSICULO, GATILHOS, CONECTIVOS, ATE):
         palavras.update(p for p in grupo if not p.isdigit())
+    for frase in PONTES + tuple(s for sufixos in SUFIXOS.values() for s in sufixos):
+        palavras.update(frase.split())
     return sorted(palavras)
 
 
@@ -119,10 +134,43 @@ def _numero(toks, i):
     return _ate_99(toks, i)
 
 
+def _numero_ordinal(toks, i):
+    """(valor, índice seguinte) se toks[i] começa um ordinal de capítulo ("terceiro", "vigésimo")."""
+    v, j = 0, i
+    if toks[j:j + 1] == ["centesimo"]:
+        v, j = 100, j + 1
+    if j < len(toks) and toks[j] in _ORD_DEZENAS:
+        v, j = v + _ORD_DEZENAS[toks[j]], j + 1
+    if j < len(toks) and toks[j] in _ORD_UNIDADES:
+        v, j = v + _ORD_UNIDADES[toks[j]], j + 1
+    return (v, j) if j > i else None
+
+
+def _marca(toks, i):
+    """("capítulo"/"versículo", valor, início e fim do número) para "capítulo três",
+    "capítulo terceiro" ou "terceiro capítulo"; None se não houver número marcado em toks[i]."""
+    if toks[i] in _CAPITULO or toks[i] in _VERSICULO:
+        j = i + 2 if toks[i + 1:i + 2] in (["o"], ["do"], ["de"]) else i + 1
+        num = _numero(toks, j) or _numero_ordinal(toks, j)
+        return (toks[i] in _CAPITULO, num[0], j, num[1]) if num else None
+    num = _numero_ordinal(toks, i)
+    if num and num[1] < len(toks) and (toks[num[1]] in _CAPITULO or toks[num[1]] in _VERSICULO):
+        return toks[num[1]] in _CAPITULO, num[0], i, num[1] + 1
+    return None
+
+
+def _ponte(toks, i):
+    """Índice depois de "dois pontos", "a partir do"... se começarem em toks[i]."""
+    for ponte in _PONTES:
+        if toks[i:i + len(ponte)] == ponte:
+            return i + len(ponte)
+    return None
+
+
 def _ordinal(toks, i, usados):
     """Ordinal dito antes do livro em toks[i]; 0 se não houver."""
     j = i - 1
-    while j >= 0 and toks[j] in _CONECTIVOS and i - j <= 3:
+    while j >= 0 and toks[j] in _CONECTIVOS and i - j <= DISTANCIA:
         j -= 1
     if j < 0 or j in usados:
         return 0
@@ -142,13 +190,30 @@ def _livro(toks, i, usados):
     if toks[i] in _NUMERADOS:
         livro = _NUMERADOS[toks[i]].get(_ordinal(toks, i, usados))
     else:
-        livro = _LIVROS.get(toks[i])
+        livro = _LIVROS.get(toks[i]) or _FRACOS.get(toks[i])
     if not livro:
         return None
     for sufixo in _SUFIXOS.get(livro, ()):
         if toks[i + 1:i + 1 + len(sufixo)] == sufixo:
             return livro, 1 + len(sufixo)
+    if toks[i] in _FRACOS:
+        num = _numero(toks, i + 1)
+        if not (toks[i + 1:i + 2] and toks[i + 1] in _CAPITULO or num and _numero(toks, num[1])):
+            return None
     return livro, 1
+
+
+def _adiante(toks, i, usados):
+    """(livro, índice seguinte) se um livro vem logo depois, como em "capítulo três de João"."""
+    k = i
+    while k < len(toks) and k - i < DISTANCIA:
+        achado = _livro(toks, k, usados)
+        if achado:
+            return achado[0], k + achado[1]
+        if toks[k] not in _CONECTIVOS and toks[k] not in _GATILHOS and toks[k] not in _ORDINAIS:
+            return None
+        k += 1
+    return None
 
 
 class Detector:
@@ -205,14 +270,13 @@ class Detector:
                 e.livro, e.cap, e.vers, e.fim, e.cadeia = achado[0], None, None, None, True
                 e.serie += 1
             return i + achado[1]
+        ponte = _ponte(toks, i)
+        if ponte:
+            return ponte
+        marca = _marca(toks, i)
+        if marca:
+            return self._marcado(e, toks, tempos, marca, usados)
         if tok in _CAPITULO or tok in _VERSICULO:
-            j = i + 2 if toks[i + 1:i + 2] in (["o"], ["do"], ["de"]) else i + 1
-            num = _numero(toks, j)
-            if num:
-                aceitar = self._capitulo if tok in _CAPITULO else self._versiculo
-                if aceitar(e, num[0], tempos[j], True):
-                    usados.update(range(j, num[1]))
-                return num[1]
             return i + 1
         num = _numero(toks, i)
         # "Lucas era um médico": "um" só vale como capítulo se vier outro número depois
@@ -227,6 +291,57 @@ class Detector:
         e.soltos += 1
         e.ate = False
         return num[1] if num else i + 1
+
+    def _marcado(self, e, toks, tempos, marca, usados):
+        """ "capítulo três", com o livro antes ou depois ("capítulo três de João",
+        "versículo dezesseis de João três", "versículo dezesseis do capítulo três de João")."""
+        e_cap, v, ini, fim = marca
+        t = tempos[ini]
+        usados.update(range(ini, fim))
+        if e_cap:
+            adiante = _adiante(toks, fim, usados)
+            if not adiante:
+                self._capitulo(e, v, t, True)
+                return fim
+            livro, fim = adiante
+            if 1 <= v <= len(VERSICULOS[livro - 1]):
+                self._fixar(e, livro, v, None, t)
+            return fim
+        cap = None
+        j = fim + 1 if toks[fim:fim + 1] in (["do"], ["de"], ["no"]) else fim
+        seguinte = _marca(toks, j) if j < len(toks) else None
+        if seguinte and seguinte[0]:  # "versículo dezesseis do capítulo três"
+            cap, fim = seguinte[1], seguinte[3]
+            usados.update(range(seguinte[2], fim))
+        adiante = _adiante(toks, fim, usados)
+        if adiante:
+            livro, fim = adiante
+            if cap is None:
+                num = _numero(toks, fim)
+                if num:
+                    cap, fim = num[0], num[1]
+                    usados.update(range(adiante[1], fim))
+                elif len(VERSICULOS[livro - 1]) == 1:
+                    cap = 1
+            if cap is None:  # o capítulo ainda não veio: fica o livro
+                e.cand, e.t_cand, e.soltos, e.ate, e.espera = livro, t, 0, False, ""
+                return fim
+        elif cap is not None and e.livro is not None:
+            livro = e.livro
+        else:
+            self._versiculo(e, v, t, True)
+            return fim
+        capitulos = VERSICULOS[livro - 1]
+        if 1 <= cap <= len(capitulos) and 1 <= v <= capitulos[cap - 1]:
+            self._fixar(e, livro, cap, v, t)
+        return fim
+
+    def _fixar(self, e, livro, cap, vers, t):
+        """Citação dita de uma vez, com o livro depois do capítulo ou do versículo."""
+        e.livro, e.cap, e.vers, e.fim, e.cadeia = livro, cap, vers, None, True
+        e.espera = "fim" if vers else "vers"
+        e.cand, e.t_num, e.soltos, e.ate = None, t, 0, False
+        e.serie += 1
 
     def _solto(self, e, v, t, artigo):
         """Número dito sem "capítulo" nem "versículo": vale pelo que veio logo antes."""

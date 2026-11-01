@@ -17,26 +17,30 @@ NOMES = (
 LIVROS = {
     "gênesis": 1, "êxodo": 2, "levítico": 3, "levíticos": 3, "números": 4, "deuteronômio": 5,
     "josué": 6, "juízes": 7, "rute": 8, "esdras": 15, "neemias": 16, "ester": 17, "jó": 18,
-    "salmo": 19, "salmos": 19, "provérbios": 20, "eclesiastes": 21, "cantares": 22, "cântico": 22,
+    "salmo": 19, "salmos": 19, "provérbios": 20, "provérbio": 20, "eclesiastes": 21, "cantares": 22, "cântico": 22,
     "cânticos": 22, "isaías": 23, "jeremias": 24, "lamentações": 25, "ezequiel": 26, "daniel": 27,
-    "oseias": 28, "joel": 29, "amós": 30, "obadias": 31, "jonas": 32, "miqueias": 33, "naum": 34,
+    "oseias": 28, "joel": 29, "amós": 30, "obadias": 31, "abdias": 31, "jonas": 32, "miqueias": 33, "naum": 34,
     "habacuque": 35, "sofonias": 36, "ageu": 37, "zacarias": 38, "malaquias": 39, "mateus": 40,
     "marcos": 41, "lucas": 42, "atos": 44, "romanos": 45, "gálatas": 48, "efésios": 49,
     "filipenses": 50, "colossenses": 51, "tito": 56, "filemom": 57, "filemon": 57, "hebreus": 58,
     "tiago": 59, "judas": 65, "apocalipse": 66,
 }
 
+# Palavras comuns na fala que só valem como livro seguidas do complemento ("ato dos apóstolos")
+# ou de capítulo e versículo ("revelação três vinte"): "uma revelação três vezes maior" não é citação.
+FRACOS = {"ato": 44, "revelação": 66}
+
 # Livros que dependem do ordinal dito antes ("primeira aos Coríntios"). 0 = sem ordinal.
 NUMERADOS = {
     "samuel": {1: 9, 2: 10}, "reis": {1: 11, 2: 12}, "crônicas": {1: 13, 2: 14},
     "coríntios": {1: 46, 2: 47}, "tessalonicenses": {1: 52, 2: 53}, "timóteo": {1: 54, 2: 55},
-    "pedro": {1: 60, 2: 61}, "joão": {0: 43, 1: 62, 2: 63, 3: 64},
+    "pedro": {1: 60, 2: 61}, "paralipômenos": {1: 13, 2: 14}, "joão": {0: 43, 1: 62, 2: 63, 3: 64},
 }
 
 # Complementos do nome que não podem ser lidos como outro livro ("Apocalipse de João").
 SUFIXOS = {
-    20: ("de salomão",), 22: ("dos cânticos", "de salomão"), 25: ("de jeremias",),
-    44: ("dos apóstolos",), 66: ("de joão",),
+    19: ("de número", "número"), 20: ("de salomão",), 22: ("dos cânticos", "de salomão"),
+    25: ("de jeremias",), 44: ("dos apóstolos",), 66: ("de são joão", "de joão"),
 }
 
 # Versículos de cada capítulo, por livro (versificação da Almeida).
