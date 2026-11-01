@@ -26,6 +26,19 @@ LIVROS = {
     "tiago": 59, "judas": 65, "apocalipse": 66,
 }
 
+# Abreviações para o texto digitado ("Rm 8:28", "1Co 13"), nunca para a fala. Com acento conta:
+# "Jó" é Jó e "Jo" é João.
+ABREVIATURAS = {
+    "gn": 1, "êx": 2, "ex": 2, "lv": 3, "nm": 4, "dt": 5, "js": 6, "jz": 7, "rt": 8, "1sm": 9,
+    "2sm": 10, "1rs": 11, "2rs": 12, "1cr": 13, "2cr": 14, "ed": 15, "ne": 16, "et": 17, "jó": 18,
+    "sl": 19, "pv": 20, "ec": 21, "ct": 22, "is": 23, "jr": 24, "lm": 25, "ez": 26, "dn": 27,
+    "os": 28, "jl": 29, "am": 30, "ob": 31, "jn": 32, "mq": 33, "na": 34, "hc": 35, "sf": 36,
+    "ag": 37, "zc": 38, "ml": 39, "mt": 40, "mc": 41, "lc": 42, "jo": 43, "at": 44, "rm": 45,
+    "1co": 46, "2co": 47, "gl": 48, "ef": 49, "fp": 50, "cl": 51, "1ts": 52, "2ts": 53, "1tm": 54,
+    "2tm": 55, "tt": 56, "fm": 57, "hb": 58, "tg": 59, "1pe": 60, "2pe": 61, "1jo": 62, "2jo": 63,
+    "3jo": 64, "jd": 65, "ap": 66,
+}
+
 # Palavras comuns na fala que só valem como livro seguidas do complemento ("ato dos apóstolos")
 # ou de capítulo e versículo ("revelação três vinte"): "uma revelação três vezes maior" não é citação.
 FRACOS = {"ato": 44, "revelação": 66}

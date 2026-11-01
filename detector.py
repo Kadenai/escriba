@@ -5,7 +5,7 @@ import re
 import unicodedata
 from dataclasses import dataclass
 
-from biblia import FRACOS, LIVROS, NOMES, NUMERADOS, SUFIXOS, VERSICULOS
+from biblia import ABREVIATURAS, FRACOS, LIVROS, NOMES, NUMERADOS, SUFIXOS, VERSICULOS
 
 UNIDADES = {"um": 1, "dois": 2, "três": 3, "quatro": 4, "cinco": 5, "seis": 6, "sete": 7,
             "oito": 8, "nove": 9}
@@ -393,6 +393,13 @@ class Detector:
         return True
 
 
+def _abreviacao(m):
+    livro = ABREVIATURAS.get((m.group(1) or "") + m.group(2).lower())
+    return NOMES[livro - 1] if livro else m.group(0)
+
+
 def ler(texto):
-    """A referência escrita em texto ("2 Coríntios 4:1"), ou None se não houver."""
+    """A referência escrita em texto ("2 Coríntios 4:1", "Rm 8:28-30"), ou None se não houver."""
+    texto = re.sub(r"(\d)\s*[-–]\s*(?=\d)", r"\1 a ", texto)  # "28-30": "28 a 30"
+    texto = re.sub(r"\b([123])?\s?([^\W\d_]{2,3})\b\.?(?=\s*\d)", _abreviacao, texto)
     return Detector().ouvir(texto, True, 0.0)

@@ -15,7 +15,7 @@ from reportlab.platypus.tableofcontents import TableOfContents
 
 AQUI = Path(__file__).parent
 SAIDA = AQUI.parent / "dist" / "Manual do Escriba.pdf"
-VERSAO = "Outubro de 2026"
+VERSAO = "Novembro de 2026"
 
 FONTES = Path("C:/Windows/Fonts")
 for nome, arquivo in (("Texto", "segoeui.ttf"), ("Texto-Negrito", "segoeuib.ttf"),
@@ -282,6 +282,8 @@ tabela(["Campo", "Para que serve"], [
     ["Texto principal do sermão", "A passagem à qual o preletor volta várias vezes. Depois de outra "
                                   "citação, o aplicativo retorna a ela sozinho, passado o tempo "
                                   "indicado em <b>Voltar a ele</b>. Veja o capítulo 6."],
+    ["Enviar uma passagem", "Para mandar ao Holyrics uma passagem digitada, sem esperar o "
+                            "preletor. Veja o fim deste capítulo."],
     ["Salvar a transcrição em", "A pasta onde fica o texto de tudo o que foi ouvido, com a hora de "
                                 "cada frase. Vazio, nada é gravado. Veja o capítulo 7."],
     ["IP, Porta e Token", "Os dados do API Server do Holyrics, preparados no capítulo 3."],
@@ -299,6 +301,19 @@ tabela(["Linha", "O que mostra"], [
 ], [0.2, 0.8])
 p("Tudo o que você altera é salvo na hora. Ao abrir de novo, o aplicativo volta como estava e "
   "começa a ouvir sem precisar clicar em nada.")
+h2("Enviar uma passagem digitando")
+p("Quando o aplicativo não pegou uma citação, ou o preletor avisou a passagem antes do culto, "
+  "digite-a no campo <b>Enviar uma passagem</b>. Ao lado aparece como foi entendida, antes de enviar.")
+itens("<b>Selecionar</b> (ou a tecla Enter) deixa a passagem pronta no Holyrics, sem projetar. "
+      "<b>Projetar</b> leva direto para a tela.",
+      f"Vale o nome inteiro ou a abreviação: {c('Romanos 8:28')}, {c('Rm 8:28')}, {c('1Co 13')}, "
+      f"{c('Sl 23')}. Para um trecho, use o hífen: {c('Rm 8:28-30')}. {c('Jo')} é João e "
+      f"{c('Jó')}, com acento, é Jó.",
+      "A passagem vai inteira, como foi digitada: o modo de trabalho não a corta, e o envio "
+      "funciona mesmo com o aplicativo desativado.",
+      "Depois do envio, ela conta como a última citação: “versículo vinte e nove” dito em seguida "
+      "continua nela, e a volta ao texto principal (capítulo 6) é armada como em qualquer citação.",
+      f"A linha de envio mostra {c('(digitado)')} no fim.")
 
 # ---------------------------------------------------------------- 5
 h1("5. Os modos de trabalho")
@@ -430,11 +445,18 @@ tabela(["O preletor diz", "O aplicativo entende"], [
     ["Romanos oito, versículos vinte e oito a trinta", "Romanos 8:28-30"],
     ["Judas cinco (livro de um capítulo só)", "Judas 1:5"],
     ["Apocalipse de João, vinte e dois", "Apocalipse 22"],
+    ["Segunda carta do apóstolo Paulo aos Coríntios, quatro um", "2 Coríntios 4:1"],
+    ["Capítulo três de João", "João 3"],
+    ["Versículo dezesseis de João, capítulo três", "João 3:16"],
+    ["João, capítulo terceiro", "João 3"],
+    ["João três, dois pontos, dezesseis", "João 3:16"],
+    ["Ato dos apóstolos, dois", "Atos 2"],
 ], [0.62, 0.38])
 h2("As regras")
 itens("<b>O número vem logo depois do livro.</b> “João três” vale. “Jonas ficou três dias” não vale, "
       "porque há palavras entre o livro e o número. A palavra “capítulo” pode ficar no meio: "
-      "“João, no capítulo três”.",
+      "“João, no capítulo três”. Com a palavra “capítulo” ou “versículo”, o livro também pode vir "
+      "depois: “capítulo três de João”.",
       "<b>Há um tempo máximo.</b> Entre o livro e o capítulo, e entre o capítulo e o versículo, podem "
       "passar no máximo 3 segundos (ajustável na janela).",
       "<b>O livro sozinho não vale.</b> Dizer apenas “João” não faz nada, pois pode ser a pessoa. "
@@ -452,8 +474,7 @@ itens("“<b>versículo</b> dezessete” muda para o versículo 17 do mesmo cap�
       "“<b>capítulo</b> quatro” muda para o capítulo 4 do mesmo livro.")
 p("Nesses casos as palavras “capítulo” e “versículo” são obrigatórias. Um número solto não vale.")
 h2("O que ainda não é entendido")
-itens("O número antes do livro: “capítulo três de João”.",
-      "Versículos separados: “versículos três e cinco” (o aplicativo fica com o primeiro).",
+itens("Versículos separados: “versículos três e cinco” (o aplicativo fica com o primeiro).",
       "Referências por descrição, sem o nome do livro: “a parábola do filho pródigo”.")
 atencao("Se o motor de fala não entender o nome de um livro, e o preletor disser em seguida "
         "“capítulo treze, versículo quatro”, o aplicativo aplica esses números ao livro citado "
@@ -568,7 +589,7 @@ tabela(["O que aparece", "Causa provável", "O que fazer"], [
 h1("13. Limitações e informações técnicas")
 h2("O que foi e o que não foi testado")
 itens("<b>Testado:</b> o reconhecimento com voz sintética em português; a detecção de referências "
-      "(54 testes automáticos); o envio dos comandos, a volta ao texto principal e a transcrição "
+      "(159 testes automáticos); o envio dos comandos, a volta ao texto principal e a transcrição "
       "com um servidor que imita o Holyrics; o instalador e o desinstalador em um computador com "
       "Windows 11; um primeiro uso real da seleção de versículos com o Holyrics.",
       "<b>Não testado:</b> a volta ao texto principal e a transcrição em um culto de verdade; "

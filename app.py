@@ -27,6 +27,7 @@ PADRAO = {"motor": "sherpa-onnx", "microfone": "", "modo": "lcv", "confirmar": F
 MODOS = (("off", "Desativado"), ("l", "Só o livro"), ("lc", "Livro e capítulo"),
          ("lcv", "Livro, capítulo e versículo"),
          ("projeta", "Livro, capítulo e versículo, e já projeta"))
+EXEMPLO_DIGITADO = "ex.: Rm 8:28-30, 1Co 13, Salmo 23"
 ASSENTAR = 1000  # ms antes de projetar, para "vinte" não ir à tela antes de "vinte e um"
 TENTAR_DE_NOVO = 5000  # ms até religar o motor depois de uma falha
 ADIAR = 500  # ms entre uma olhada e outra enquanto a volta espera o preletor terminar a frase
@@ -59,6 +60,8 @@ class App:
         self.ouvido = tk.StringVar()
         self.envio = tk.StringVar()
         self.lido = tk.StringVar()  # como o texto principal foi entendido
+        self.digitado = tk.StringVar()  # passagem digitada para enviar na mão
+        self.entendido = tk.StringVar(value=EXEMPLO_DIGITADO)
         self.fila = queue.Queue()  # o que chega das outras threads: (motor, tipo, dados...)
         self.envios = queue.Queue()  # pedidos ao Holyrics, despachados em ordem por uma thread
         threading.Thread(target=self._despachar, daemon=True).start()
@@ -125,23 +128,37 @@ class App:
         ttk.Spinbox(linha, from_=5, to=900, width=4, textvariable=self.v["retorno"]).pack(side="left")
         ttk.Label(linha, text=" s depois de outra citação").pack(side="left")
 
+        manual = ttk.LabelFrame(quadro, text="Enviar uma passagem", padding=8)
+        manual.grid(row=6, column=0, columnspan=2, sticky="ew", pady=(8, 0))
+        linha = ttk.Frame(manual)
+        linha.pack(anchor="w")
+        campo = ttk.Entry(linha, textvariable=self.digitado, width=24)
+        campo.pack(side="left")
+        campo.bind("<Return>", lambda _: self._enviar_digitado(False))
+        ttk.Button(linha, text="Selecionar (Enter)",
+                   command=lambda: self._enviar_digitado(False)).pack(side="left", padx=(8, 0))
+        ttk.Button(linha, text="Projetar",
+                   command=lambda: self._enviar_digitado(True)).pack(side="left", padx=(4, 0))
+        ttk.Label(manual, textvariable=self.entendido).pack(anchor="w", pady=(4, 0))
+        self.digitado.trace_add("write", self._ler_digitado)
+
         if self.v["transcricao"].get():
             linha = ttk.Frame(quadro)
-            linha.grid(row=6, column=0, columnspan=2, sticky="w", pady=(8, 0))
+            linha.grid(row=7, column=0, columnspan=2, sticky="w", pady=(8, 0))
             ttk.Label(linha, text="Salvar a transcrição em ").pack(side="left")
             ttk.Entry(linha, textvariable=self.v["pasta"], width=30).pack(side="left")
             ttk.Button(linha, text="Escolher…", command=self._escolher_pasta).pack(
                 side="left", padx=(4, 0))
 
         rede = ttk.LabelFrame(quadro, text="Holyrics (API Server)", padding=8)
-        rede.grid(row=7, column=0, columnspan=2, sticky="ew", pady=8)
+        rede.grid(row=8, column=0, columnspan=2, sticky="ew", pady=8)
         for coluna, (texto, chave, largura) in enumerate((("IP", "host", 15), ("Porta", "porta", 6),
                                                           ("Token", "token", 18))):
             ttk.Label(rede, text=texto).grid(row=0, column=2 * coluna, padx=(0, 4))
             ttk.Entry(rede, textvariable=self.v[chave], width=largura).grid(
                 row=0, column=2 * coluna + 1, padx=(0, 10))
 
-        for linha, variavel in enumerate((self.estado, self.ouvido, self.envio), start=8):
+        for linha, variavel in enumerate((self.estado, self.ouvido, self.envio), start=9):
             ttk.Label(quadro, textvariable=variavel, width=58).grid(row=linha, column=0,
                                                                     columnspan=2, sticky="w")
 
@@ -170,6 +187,26 @@ class App:
             self.lido.set(f"→ {rotulo(*self.principal)}")
         else:
             self.lido.set("não entendi" if texto else "ex.: 2 Coríntios 4:1")
+
+    def _ler_digitado(self, *_):
+        texto = self.digitado.get().strip()
+        ref = ler(texto)
+        self.entendido.set(f"→ {ref}" if ref else "não entendi" if texto else EXEMPLO_DIGITADO)
+
+    def _enviar_digitado(self, projetar):
+        """Envia a passagem digitada, inteira, como foi escrita: o modo não a corta. Funciona
+        mesmo com o aplicativo desativado. Passa a valer como a última citação ouvida."""
+        ref = ler(self.digitado.get())
+        if not ref:
+            self.entendido.set("não entendi")
+            return
+        versiculo = ref.versiculo or (1 if projetar else None)
+        self._cancelar()
+        if ref.capitulo:
+            self.detector.situar(ref.livro, ref.capitulo, versiculo)  # "versículo 29" continua
+        self._marcar_volta(ref)
+        self.alvo = (ref.livro, ref.capitulo, versiculo, ref.fim if projetar else None, projetar)
+        self._enviar(self.alvo, " (digitado)")
 
     def _recorte(self, capitulo, versiculo):
         """O capítulo e o versículo que o modo escolhido deixa passar."""
