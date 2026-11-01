@@ -1,10 +1,10 @@
-# Monta o instalador e o manual no Windows e publica o release quando uma tag v* é enviada.
-# As notas do release ficam em .github/notas/<tag>.md.
+# Monta o instalador e o manual no Windows e publica o release v<VERSAO> quando o arquivo
+# VERSAO muda. Se esse release já existe, não faz nada. As notas ficam em .github/notas/v<VERSAO>.md.
 name: Instalador
 
 on:
   push:
-    tags: ["v*"]
+    paths: ["VERSAO"]
 
 permissions:
   contents: write
@@ -15,17 +15,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Versão
+        id: versao
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "v" + (Get-Content VERSAO -Raw).Trim()
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          gh release view $tag 2>$null
+          "existe=$([int]($LASTEXITCODE -eq 0))" >> $env:GITHUB_OUTPUT
+          exit 0
+
       - uses: actions/setup-python@v5
+        if: steps.versao.outputs.existe == '0'
         with:
           python-version: "3.11"
 
       - name: Dependências
+        if: steps.versao.outputs.existe == '0'
         run: |
           python -m venv .venv
           .venv\Scripts\python -m pip install --upgrade pip
           .venv\Scripts\python -m pip install -r requirements.txt reportlab
 
       - name: Modelos de fala (release modelos-1)
+        if: steps.versao.outputs.existe == '0'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -37,22 +51,27 @@ jobs:
           Get-ChildItem modelos
 
       - name: Testes
+        if: steps.versao.outputs.existe == '0'
         run: .venv\Scripts\python -m pytest -q
 
       - name: Empacotar
+        if: steps.versao.outputs.existe == '0'
         shell: cmd
         run: call empacotar.bat
 
       - name: Instalador
+        if: steps.versao.outputs.existe == '0'
         run: .venv\Scripts\python instalador\montar.py
 
       - name: Manual
+        if: steps.versao.outputs.existe == '0'
         run: .venv\Scripts\python manual\manual.py
 
       - name: Publicar o release
+        if: steps.versao.outputs.existe == '0'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = $env:GITHUB_REF_NAME
+          $tag = "${{ steps.versao.outputs.tag }}"
           gh release create $tag "dist\Instalar Escriba.exe" "dist\Manual do Escriba.pdf" `
-            --title "Escriba $($tag.TrimStart('v'))" --notes-file ".github\notas\$tag.md"
+            --target $env:GITHUB_SHA --title "Escriba $($tag.TrimStart('v'))" --notes-file ".github\notas\$tag.md"

@@ -49,6 +49,12 @@ py -3.11 manual\manual.py
 O primeiro comando gera `dist\Escriba\` com o PyInstaller; o segundo, `dist\Instalar Escriba.exe`
 com o IExpress do Windows; o terceiro, o manual em PDF (precisa do `reportlab`).
 
+### Publicar uma versão nos releases
+
+Não precisa de Windows: troque o número em `VERSAO` (por exemplo, `1.2.0`), escreva as notas em
+`.github/notas/v1.2.0.md` e envie. O GitHub Actions monta o instalador e o manual numa máquina
+Windows e publica o release `v1.2.0` com os dois arquivos. Se esse release já existir, nada acontece.
+
 ## Arquivos
 
 | Arquivo | O que faz |
