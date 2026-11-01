@@ -22,12 +22,15 @@ CONFIG = Path(os.environ["APPDATA"]) / "Escriba" / "config.json"
 ICONE = Path(getattr(sys, "_MEIPASS", Path(__file__).parent)) / "logo" / "escriba.ico"
 PADRAO = {"motor": "sherpa-onnx", "microfone": "", "modo": "lcv", "confirmar": False,
           "espera": 4, "janela": 3, "principal": "", "retorno": 60, "pasta": "",
-          "host": "", "porta": 8091, "token": ""}
+          "host": "", "porta": 8091, "token": "", "transcricao": True}
+# Só no config.json, sem opção na janela: "transcricao": false desliga e esconde a transcrição.
 MODOS = (("off", "Desativado"), ("l", "Só o livro"), ("lc", "Livro e capítulo"),
          ("lcv", "Livro, capítulo e versículo"),
          ("projeta", "Livro, capítulo e versículo, e já projeta"))
 ASSENTAR = 1000  # ms antes de projetar, para "vinte" não ir à tela antes de "vinte e um"
 TENTAR_DE_NOVO = 5000  # ms até religar o motor depois de uma falha
+ADIAR = 500  # ms entre uma olhada e outra enquanto a volta espera o preletor terminar a frase
+ADIAR_MAX = 15000  # ms que a volta espera, no máximo, por uma frase que não termina
 
 
 def microfones():
@@ -77,6 +80,7 @@ class App:
         self.v["janela"].trace_add(
             "write", lambda *_: setattr(self.detector, "janela", self._inteiro("janela")))
         raiz.protocol("WM_DELETE_WINDOW", self._sair)
+        self._salvar()  # completa o config.json com as opções novas, como "transcricao"
         self._reiniciar()
         self._mudar_principal()
         self._tique()
@@ -121,11 +125,13 @@ class App:
         ttk.Spinbox(linha, from_=5, to=900, width=4, textvariable=self.v["retorno"]).pack(side="left")
         ttk.Label(linha, text=" s depois de outra citação").pack(side="left")
 
-        linha = ttk.Frame(quadro)
-        linha.grid(row=6, column=0, columnspan=2, sticky="w", pady=(8, 0))
-        ttk.Label(linha, text="Salvar a transcrição em ").pack(side="left")
-        ttk.Entry(linha, textvariable=self.v["pasta"], width=30).pack(side="left")
-        ttk.Button(linha, text="Escolher…", command=self._escolher_pasta).pack(side="left", padx=(4, 0))
+        if self.v["transcricao"].get():
+            linha = ttk.Frame(quadro)
+            linha.grid(row=6, column=0, columnspan=2, sticky="w", pady=(8, 0))
+            ttk.Label(linha, text="Salvar a transcrição em ").pack(side="left")
+            ttk.Entry(linha, textvariable=self.v["pasta"], width=30).pack(side="left")
+            ttk.Button(linha, text="Escolher…", command=self._escolher_pasta).pack(
+                side="left", padx=(4, 0))
 
         rede = ttk.LabelFrame(quadro, text="Holyrics (API Server)", padding=8)
         rede.grid(row=7, column=0, columnspan=2, sticky="ew", pady=8)
@@ -189,6 +195,7 @@ class App:
             self.motor = None
         self._cancelar()
         self.alvo = None
+        self.inicio = None  # a frase em curso morreu com o motor
         self.detector = Detector(self._inteiro("janela"))
         if self.principal:
             self.detector.situar(*self.principal)
@@ -269,7 +276,7 @@ class App:
     def _transcrever(self, texto):
         """Acrescenta a fala, com a hora em que começou, ao arquivo do dia."""
         pasta = self.v["pasta"].get().strip()
-        if not pasta:
+        if not pasta or not self.v["transcricao"].get():
             return
         try:
             with open(Path(pasta) / f"Transcrição {self.inicio:%Y-%m-%d}.txt", "a",
@@ -291,9 +298,15 @@ class App:
         else:
             self.volta = self.raiz.after(self._inteiro("retorno") * 1000, self._voltar)
 
-    def _voltar(self):
+    def _voltar(self, esperou=0):
         self.volta = None
         if not self.principal or self.v["modo"].get() == "off":
+            return
+        # O preletor no meio de uma frase, ou uma citação a caminho do Holyrics (esperando para
+        # projetar ou no aviso de confirmação): o que ele está dizendo prevalece. A volta espera
+        # a pausa; se a frase trouxer outra citação, a contagem recomeça do zero.
+        if (self.inicio or self.pendente) and esperou < ADIAR_MAX:
+            self.volta = self.raiz.after(ADIAR, self._voltar, esperou + ADIAR)
             return
         self.detector.situar(*self.principal)
         self._cancelar()

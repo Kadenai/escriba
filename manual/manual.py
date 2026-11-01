@@ -360,6 +360,9 @@ tabela(["Momento", "O que o aplicativo faz"], [
      "Seleciona 2 Coríntios 4:2. O texto principal avança junto: a próxima volta será para o versículo 2."],
     ["O preletor cita outra passagem antes de o tempo acabar.",
      "Vai para a nova passagem e recomeça a contagem."],
+    ["O tempo acaba enquanto o preletor está no meio de uma frase.",
+     "Espera a frase terminar. Se nela houver outra citação, a citação vale e a contagem "
+     "recomeça; se não, volta ao texto principal na pausa."],
 ], [0.42, 0.58])
 h2("Detalhes que convém saber")
 itens("<b>O ponto de retorno acompanha a leitura.</b> Cada citação dentro do mesmo livro e capítulo "
@@ -385,6 +388,11 @@ h2("Como ligar e desligar")
 passos("Ao lado de <b>Salvar a transcrição em</b>, clique em <b>Escolher…</b> e aponte uma pasta.",
        "Pronto: a gravação começa na próxima frase, sem precisar clicar em mais nada.",
        "Para desligar, apague o conteúdo do campo.")
+LIGADA, DESLIGADA = c('"transcricao": true'), c('"transcricao": false')
+caixa("Para tirar a opção da janela:", f"feche o Escriba, abra o arquivo {c('config.json')} em "
+      f"{PASTA_CONFIG} no Bloco de Notas e troque {LIGADA} por {DESLIGADA}. A linha some da "
+      "janela e nada é gravado, mesmo com uma pasta escolhida. Para trazer de volta, troque de "
+      "novo por true.")
 h2("O que é gravado")
 p(f"Um arquivo de texto por dia, com o nome {c('Transcrição 2026-10-11.txt')} (ano, mês e dia). "
   "Cada frase ocupa uma linha, precedida da hora em que começou a ser dita:")
