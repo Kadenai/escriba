@@ -1,10 +1,10 @@
 # Monta o instalador e o manual no Windows e publica o release v<VERSAO> quando o arquivo
-# VERSAO muda. Se esse release já existe, não faz nada. As notas ficam em .github/notas/v<VERSAO>.md.
+# VERSAO ou as notas mudam. Se esse release já existe, não faz nada. As notas ficam em .github/notas/v<VERSAO>.md.
 name: Instalador
 
 on:
   push:
-    paths: ["VERSAO"]
+    paths: ["VERSAO", ".github/notas/**"]
 
 permissions:
   contents: write

@@ -26,7 +26,7 @@ LIVROS = {
     "tiago": 59, "judas": 65, "apocalipse": 66,
 }
 
-# Abreviações para o texto digitado ("Rm 8:28", "1Co 13"), nunca para a fala. Com acento conta:
+# Abreviações para o texto digitado ("Rm 8:28", "1Co 13"), nunca para a fala (digitado.py). Com acento conta:
 # "Jó" é Jó e "Jo" é João.
 ABREVIATURAS = {
     "gn": 1, "êx": 2, "ex": 2, "lv": 3, "nm": 4, "dt": 5, "js": 6, "jz": 7, "rt": 8, "1sm": 9,

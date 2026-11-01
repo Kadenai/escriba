@@ -61,6 +61,7 @@ Windows e publica o release `v1.2.0` com os dois arquivos. Se esse release já e
 | --- | --- |
 | `app.py` | Janela, configuração e envio ao Holyrics |
 | `detector.py` | Acha as referências bíblicas no texto reconhecido |
+| `digitado.py` | Lê a passagem digitada na janela, separado da fala |
 | `biblia.py` | Nomes dos livros e número de versículos por capítulo |
 | `motores.py` | Os três motores de fala |
 | `holyrics.py` | Chamadas ao API Server do Holyrics |

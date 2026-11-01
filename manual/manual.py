@@ -302,17 +302,20 @@ tabela(["Linha", "O que mostra"], [
 p("Tudo o que você altera é salvo na hora. Ao abrir de novo, o aplicativo volta como estava e "
   "começa a ouvir sem precisar clicar em nada.")
 h2("Enviar uma passagem digitando")
-p("Quando o aplicativo não pegou uma citação, ou o preletor avisou a passagem antes do culto, "
-  "digite-a no campo <b>Enviar uma passagem</b>. Ao lado aparece como foi entendida, antes de enviar.")
+p("Quando o aplicativo não pegou uma citação, ou o preletor avisou a passagem antes, digite-a no "
+  "campo <b>Enviar uma passagem</b>. Ao lado aparece como foi entendida, antes de enviar.")
 itens("<b>Selecionar</b> (ou a tecla Enter) deixa a passagem pronta no Holyrics, sem projetar. "
       "<b>Projetar</b> leva direto para a tela.",
-      f"Vale o nome inteiro ou a abreviação: {c('Romanos 8:28')}, {c('Rm 8:28')}, {c('1Co 13')}, "
-      f"{c('Sl 23')}. Para um trecho, use o hífen: {c('Rm 8:28-30')}. {c('Jo')} é João e "
-      f"{c('Jó')}, com acento, é Jó.",
+      f"Escreva do jeito mais rápido: {c('genesis 2 3')}, {c('Gênesis 2:3')}, {c('Gn 2.3')}, "
+      f"{c('rom 8 28')}, {c('1Co 13')}. Acento e maiúscula não importam, a não ser em "
+      f"{c('Jó')}: com acento é Jó, e {c('Jo')} sem acento é João. Para um trecho, use o hífen "
+      f"ou “a”: {c('Rm 8:28-30')}, {c('romanos 8 28 a 30')}.",
       "A passagem vai inteira, como foi digitada: o modo de trabalho não a corta, e o envio "
       "funciona mesmo com o aplicativo desativado.",
-      "Depois do envio, ela conta como a última citação: “versículo vinte e nove” dito em seguida "
-      "continua nela, e a volta ao texto principal (capítulo 6) é armada como em qualquer citação.",
+      "<b>É separado da fala.</b> O envio digitado não muda o que o aplicativo está ouvindo: "
+      "“versículo dezessete” dito depois continua na última passagem falada, e a volta ao texto "
+      "principal (capítulo 6) segue a contagem da fala. Se ela estiver armada, ainda volta na hora "
+      "marcada.",
       f"A linha de envio mostra {c('(digitado)')} no fim.")
 
 # ---------------------------------------------------------------- 5
@@ -589,7 +592,7 @@ tabela(["O que aparece", "Causa provável", "O que fazer"], [
 h1("13. Limitações e informações técnicas")
 h2("O que foi e o que não foi testado")
 itens("<b>Testado:</b> o reconhecimento com voz sintética em português; a detecção de referências "
-      "(159 testes automáticos); o envio dos comandos, a volta ao texto principal e a transcrição "
+      "(187 testes automáticos); o envio dos comandos, a volta ao texto principal e a transcrição "
       "com um servidor que imita o Holyrics; o instalador e o desinstalador em um computador com "
       "Windows 11; um primeiro uso real da seleção de versículos com o Holyrics.",
       "<b>Não testado:</b> a volta ao texto principal e a transcrição em um culto de verdade; "

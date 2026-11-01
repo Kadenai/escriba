@@ -72,8 +72,6 @@ def test_citacoes(texto, esperado):
     ("primeira pedro dois nove", "1 Pedro 2:9"),
     ("segunda pedro três nove", "2 Pedro 3:9"),
     ("segunda de pedro três nove", "2 Pedro 3:9"),
-    ("i coríntios treze", "1 Coríntios 13"),
-    ("ii timóteo três", "2 Timóteo 3"),
     # nomes alternativos de livros
     ("carta aos romanos oito vinte e oito", "Romanos 8:28"),
     ("epístola aos hebreus onze um", "Hebreus 11:1"),
@@ -136,7 +134,6 @@ def test_citacoes(texto, esperado):
     ("revelação capítulo três", "Apocalipse 3"),
     ("evangelho segundo são joão três dezesseis", "João 3:16"),
     ("são joão três dezesseis", "João 3:16"),
-    ("III João 4", "3 João 1:4"),
 ])
 def test_variacoes_de_fala(texto, esperado):
     assert str(ultima(texto)) == esperado
@@ -282,29 +279,6 @@ def test_ler():
     assert str(ler("Judas 5")) == "Judas 1:5"
     assert ler("joão") is None
     assert ler("") is None
-
-
-@pytest.mark.parametrize("texto, esperado", [
-    ("Rm 8:28", "Romanos 8:28"),
-    ("Rm 8:28-30", "Romanos 8:28-30"),
-    ("Romanos 8:28-30", "Romanos 8:28-30"),
-    ("1Co 13", "1 Coríntios 13"),
-    ("1 Co 13:4", "1 Coríntios 13:4"),
-    ("2Tm 3.16", "2 Timóteo 3:16"),
-    ("Jo 3:16", "João 3:16"),        # sem acento é João
-    ("Jó 38", "Jó 38"),              # com acento é Jó
-    ("1Jo 4:8", "1 João 4:8"),
-    ("Sl 23", "Salmos 23"),
-    ("Êx 20", "Êxodo 20"),
-    ("Jd 5", "Judas 1:5"),
-])
-def test_ler_abreviacoes_e_intervalos(texto, esperado):
-    assert str(ler(texto)) == esperado
-
-
-def test_abreviacao_so_vale_antes_de_numero():
-    assert ler("os irmãos") is None
-    assert ler("at") is None
 
 
 def test_vocabulario():

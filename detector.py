@@ -5,7 +5,7 @@ import re
 import unicodedata
 from dataclasses import dataclass
 
-from biblia import ABREVIATURAS, FRACOS, LIVROS, NOMES, NUMERADOS, SUFIXOS, VERSICULOS
+from biblia import FRACOS, LIVROS, NOMES, NUMERADOS, SUFIXOS, VERSICULOS
 
 UNIDADES = {"um": 1, "dois": 2, "três": 3, "quatro": 4, "cinco": 5, "seis": 6, "sete": 7,
             "oito": 8, "nove": 9}
@@ -16,7 +16,6 @@ DEZENAS = {"vinte": 20, "trinta": 30, "quarenta": 40, "cinquenta": 50, "sessenta
            "setenta": 70, "oitenta": 80, "noventa": 90}
 ORDINAIS = {"primeiro": 1, "primeira": 1, "segundo": 2, "segunda": 2, "terceiro": 3,
             "terceira": 3, "um": 1, "dois": 2, "três": 3, "1": 1, "2": 2, "3": 3}
-ROMANOS = {"i": 1, "ii": 2, "iii": 3}  # só no texto escrito ("II Timóteo"), nunca na fala
 # Ordinais de capítulo e versículo, só valem junto da marca ("capítulo terceiro", "terceiro capítulo").
 ORD_UNIDADES = {"primeiro": 1, "segundo": 2, "terceiro": 3, "quarto": 4, "quinto": 5, "sexto": 6,
                 "sétimo": 7, "oitavo": 8, "nono": 9}
@@ -52,7 +51,7 @@ def _n(palavras):
 
 _UNIDADES, _DEZENAS = _n(UNIDADES), _n(DEZENAS)
 _ATE_19 = {**_UNIDADES, **_n(DEZ_A_19)}
-_ORDINAIS, _LIVROS, _NUMERADOS = {**_n(ORDINAIS), **ROMANOS}, _n(LIVROS), _n(NUMERADOS)
+_ORDINAIS, _LIVROS, _NUMERADOS = _n(ORDINAIS), _n(LIVROS), _n(NUMERADOS)
 _FRACOS, _ORD_UNIDADES, _ORD_DEZENAS = _n(FRACOS), _n(ORD_UNIDADES), _n(ORD_DEZENAS)
 _PONTES = [normalizar(p) for p in PONTES]
 _CAPITULO, _VERSICULO, _GATILHOS, _ATE = _n(CAPITULO), _n(VERSICULO), _n(GATILHOS), _n(ATE)
@@ -393,13 +392,6 @@ class Detector:
         return True
 
 
-def _abreviacao(m):
-    livro = ABREVIATURAS.get((m.group(1) or "") + m.group(2).lower())
-    return NOMES[livro - 1] if livro else m.group(0)
-
-
 def ler(texto):
-    """A referência escrita em texto ("2 Coríntios 4:1", "Rm 8:28-30"), ou None se não houver."""
-    texto = re.sub(r"(\d)\s*[-–]\s*(?=\d)", r"\1 a ", texto)  # "28-30": "28 a 30"
-    texto = re.sub(r"\b([123])?\s?([^\W\d_]{2,3})\b\.?(?=\s*\d)", _abreviacao, texto)
+    """A referência num texto inteiro, lido de uma vez como se fosse uma fala (para os testes)."""
     return Detector().ouvir(texto, True, 0.0)

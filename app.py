@@ -15,7 +15,8 @@ from tkinter import filedialog, ttk
 import sounddevice as sd
 
 import holyrics
-from detector import Detector, ler, rotulo
+from detector import Detector, rotulo
+from digitado import interpretar
 from motores import MOTORES
 
 CONFIG = Path(os.environ["APPDATA"]) / "Escriba" / "config.json"
@@ -27,7 +28,7 @@ PADRAO = {"motor": "sherpa-onnx", "microfone": "", "modo": "lcv", "confirmar": F
 MODOS = (("off", "Desativado"), ("l", "Só o livro"), ("lc", "Livro e capítulo"),
          ("lcv", "Livro, capítulo e versículo"),
          ("projeta", "Livro, capítulo e versículo, e já projeta"))
-EXEMPLO_DIGITADO = "ex.: Rm 8:28-30, 1Co 13, Salmo 23"
+EXEMPLO_DIGITADO = "ex.: genesis 2 3, Rm 8:28-30, 1Co 13"
 ASSENTAR = 1000  # ms antes de projetar, para "vinte" não ir à tela antes de "vinte e um"
 TENTAR_DE_NOVO = 5000  # ms até religar o motor depois de uma falha
 ADIAR = 500  # ms entre uma olhada e outra enquanto a volta espera o preletor terminar a frase
@@ -180,7 +181,7 @@ class App:
 
     def _mudar_principal(self, *_):
         texto = self.v["principal"].get().strip()
-        ref = ler(texto)
+        ref = interpretar(texto)
         self.principal = (ref.livro, ref.capitulo, ref.versiculo) if ref and ref.capitulo else None
         if self.principal:
             self.detector.situar(*self.principal)
@@ -190,23 +191,20 @@ class App:
 
     def _ler_digitado(self, *_):
         texto = self.digitado.get().strip()
-        ref = ler(texto)
+        ref = interpretar(texto)
         self.entendido.set(f"→ {ref}" if ref else "não entendi" if texto else EXEMPLO_DIGITADO)
 
     def _enviar_digitado(self, projetar):
-        """Envia a passagem digitada, inteira, como foi escrita: o modo não a corta. Funciona
-        mesmo com o aplicativo desativado. Passa a valer como a última citação ouvida."""
-        ref = ler(self.digitado.get())
+        """Envia a passagem digitada, inteira, como foi escrita: o modo não a corta, e funciona
+        mesmo com o aplicativo desativado. Separado da fala: não mexe no detector, na volta ao
+        texto principal nem no que a fala está para enviar."""
+        ref = interpretar(self.digitado.get())
         if not ref:
             self.entendido.set("não entendi")
             return
         versiculo = ref.versiculo or (1 if projetar else None)
-        self._cancelar()
-        if ref.capitulo:
-            self.detector.situar(ref.livro, ref.capitulo, versiculo)  # "versículo 29" continua
-        self._marcar_volta(ref)
-        self.alvo = (ref.livro, ref.capitulo, versiculo, ref.fim if projetar else None, projetar)
-        self._enviar(self.alvo, " (digitado)")
+        self._pedir((ref.livro, ref.capitulo, versiculo, ref.fim if projetar else None, projetar),
+                    " (digitado)")
 
     def _recorte(self, capitulo, versiculo):
         """O capítulo e o versículo que o modo escolhido deixa passar."""
@@ -352,14 +350,19 @@ class App:
 
     def _enviar(self, alvo, nota=""):
         self.pendente = None
+        if not self._pedir(alvo, nota):
+            self.alvo = None
+
+    def _pedir(self, alvo, nota=""):
+        """Põe o envio na fila do Holyrics. False se falta o IP."""
         livro, capitulo, versiculo, fim, projetar = alvo
         texto = rotulo(livro, capitulo, versiculo, fim) + nota
         destino = self.v["host"].get().strip(), self._inteiro("porta"), self.v["token"].get().strip()
         if not destino[0]:
             self.envio.set(f"{texto}: falta o IP do Holyrics")
-            self.alvo = None
-            return
+            return False
         self.envios.put((destino, alvo, texto))
+        return True
 
     def _despachar(self):
         """Envia um pedido por vez, em ordem. Se acumularem, só o mais recente interessa."""
