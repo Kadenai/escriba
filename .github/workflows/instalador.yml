@@ -1,0 +1,58 @@
+# Monta o instalador e o manual no Windows e publica o release quando uma tag v* é enviada.
+# As notas do release ficam em .github/notas/<tag>.md.
+name: Instalador
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  instalador:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependências
+        run: |
+          python -m venv .venv
+          .venv\Scripts\python -m pip install --upgrade pip
+          .venv\Scripts\python -m pip install -r requirements.txt reportlab
+
+      - name: Modelos de fala (release modelos-1)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download modelos-1 --pattern "*.zip" --dir _baixado
+          Expand-Archive (Get-ChildItem _baixado\*.zip)[0].FullName -DestinationPath _modelos
+          $raiz = (Get-ChildItem _modelos -Recurse -Directory -Filter vosk-pt)[0].Parent.FullName
+          Move-Item "$raiz\vosk-pt" modelos\
+          Move-Item "$raiz\sherpa-pt" modelos\
+          Get-ChildItem modelos
+
+      - name: Testes
+        run: .venv\Scripts\python -m pytest -q
+
+      - name: Empacotar
+        shell: cmd
+        run: call empacotar.bat
+
+      - name: Instalador
+        run: .venv\Scripts\python instalador\montar.py
+
+      - name: Manual
+        run: .venv\Scripts\python manual\manual.py
+
+      - name: Publicar o release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          gh release create $tag "dist\Instalar Escriba.exe" "dist\Manual do Escriba.pdf" `
+            --title "Escriba $($tag.TrimStart('v'))" --notes-file ".github\notas\$tag.md"
