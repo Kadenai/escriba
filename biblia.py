@@ -50,6 +50,24 @@ NUMERADOS = {
     "pedro": {1: 60, 2: 61}, "joão": {0: 43, 1: 62, 2: 63, 3: 64},
 }
 
+# Grafias erradas que o motor de fala costuma entregar -> nome certo (chave de LIVROS ou NUMERADOS).
+# Erros de uma letra em nomes compridos o detector já tolera sozinho; aqui ficam os que ele não pega.
+# Não entram no vocabulário do motor do Windows, que só escreve as grafias certas.
+VARIANTES = {
+    "tessalonisenses": "tessalonicenses", "tessalonissenses": "tessalonicenses",
+    "tesalonicenses": "tessalonicenses", "tesalonisenses": "tessalonicenses",
+    "tessalonicences": "tessalonicenses", "tessalonicense": "tessalonicenses",
+    "colocenses": "colossenses", "colosenses": "colossenses", "colossences": "colossenses",
+    "colocences": "colossenses",
+    "felipenses": "filipenses", "filipences": "filipenses", "felipences": "filipenses",
+    "corintos": "coríntios", "corinthios": "coríntios", "coríntio": "coríntios",
+    "timótio": "timóteo", "timoteu": "timóteo",
+    "habacuc": "habacuque", "abacuque": "habacuque", "abacuc": "habacuque",
+    "ozéias": "oseias", "abdias": "obadias", "miquéas": "miqueias",
+    "eclesiaste": "eclesiastes", "deuteronómio": "deuteronômio", "levitícos": "levíticos",
+    "apocalípse": "apocalipse", "apocalipsis": "apocalipse",
+}
+
 # Complementos do nome que não podem ser lidos como outro livro ("Apocalipse de João").
 SUFIXOS = {
     19: ("de número", "número"), 20: ("de salomão",), 22: ("dos cânticos", "de salomão"),

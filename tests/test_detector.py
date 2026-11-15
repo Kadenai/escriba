@@ -291,3 +291,41 @@ def test_vocabulario():
 
 def test_referencia_e_comparavel():
     assert Referencia(43, 3, 16) == Referencia(43, 3, 16)
+
+
+@pytest.mark.parametrize("texto, esperado", [
+    ("primeira aos tessalonisenses quatro dezesseis", "1 Tessalonicenses 4:16"),
+    ("segunda aos tessalonissenses três dez", "2 Tessalonicenses 3:10"),
+    ("primeira tesalonicenses cinco", "1 Tessalonicenses 5"),
+    ("colocenses três dois", "Colossenses 3:2"),
+    ("felipenses quatro treze", "Filipenses 4:13"),
+    ("primeira aos corintos treze", "1 Coríntios 13"),
+    ("segunda timótio um sete", "2 Timóteo 1:7"),
+    ("deuteronomo seis quatro", "Deuteronômio 6:4"),       # tolerância: uma letra a menos
+    ("eclesiastis três um", "Eclesiastes 3:1"),            # tolerância: uma letra trocada
+    ("apocalipce vinte e um", "Apocalipse 21"),
+    ("filipensses quatro", "Filipenses 4"),
+])
+def test_grafias_erradas_do_motor(texto, esperado):
+    assert str(ultima(texto)) == esperado
+
+
+@pytest.mark.parametrize("texto", [
+    "ezequias reinou vinte e nove anos",   # rei, não o profeta Ezequiel
+    "a lamentação dos três dias",
+    "uma sinfonia de dez",
+    "cronista doze",
+])
+def test_palavra_parecida_nao_vira_livro(texto):
+    assert ultima(texto) is None
+
+
+def test_variantes_apontam_para_livros():
+    from biblia import LIVROS, NUMERADOS, VARIANTES
+    for certa in VARIANTES.values():
+        assert certa in LIVROS or certa in NUMERADOS, certa
+
+
+@pytest.mark.parametrize("texto", ["cantarei dois hinos", "os cantores três", "jantares dois"])
+def test_cantares_nao_tolera_erro(texto):
+    assert ultima(texto) is None
