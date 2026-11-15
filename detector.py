@@ -5,7 +5,9 @@ import re
 import unicodedata
 from dataclasses import dataclass
 
-from biblia import LIVROS, NOMES, NUMERADOS, SUFIXOS, VERSICULOS
+from functools import lru_cache
+
+from biblia import LIVROS, NOMES, NUMERADOS, SUFIXOS, VARIANTES, VERSICULOS
 
 UNIDADES = {"um": 1, "dois": 2, "três": 3, "quatro": 4, "cinco": 5, "seis": 6, "sete": 7,
             "oito": 8, "nove": 9}
@@ -45,6 +47,40 @@ _ORDINAIS, _LIVROS, _NUMERADOS = _n(ORDINAIS), _n(LIVROS), _n(NUMERADOS)
 _CAPITULO, _VERSICULO, _GATILHOS, _ATE = _n(CAPITULO), _n(VERSICULO), _n(GATILHOS), _n(ATE)
 _CONECTIVOS = _n(CONECTIVOS) | {"unk"}  # "[unk]" é o que o Vosk põe no lugar de palavra de fora
 _SUFIXOS = {livro: [normalizar(s) for s in sufixos] for livro, sufixos in SUFIXOS.items()}
+_VARIANTES = {normalizar(v)[0]: normalizar(c)[0] for v, c in VARIANTES.items()}
+_CONHECIDAS = set().union(_UNIDADES, _ATE_19, _DEZENAS, _ORDINAIS, _LIVROS, _NUMERADOS, _CAPITULO,
+                          _VERSICULO, _GATILHOS, _CONECTIVOS, _ATE)
+# Só nomes compridos aceitam erro: em "Jó" ou "Tito", uma letra trocada já é outra palavra, e
+# mesmo com 8 letras ainda há vizinhos comuns ("cantarei" e "cantores" -> Cantares).
+_TOLERAVEIS = [nome for nome in (*_LIVROS, *_NUMERADOS) if len(nome) >= 9]
+
+
+def _distancia(a, b):
+    """Quantas letras é preciso trocar, tirar ou pôr para ir de a até b."""
+    anterior = list(range(len(b) + 1))
+    for i, x in enumerate(a, 1):
+        atual = [i]
+        for j, y in enumerate(b, 1):
+            atual.append(min(anterior[j] + 1, atual[j - 1] + 1, anterior[j - 1] + (x != y)))
+        anterior = atual
+    return anterior[-1]
+
+
+@lru_cache(maxsize=4096)
+def _grafia(tok):
+    """Corrige nome de livro escrito errado pelo motor ("tessalonisenses" -> "tessalonicenses")."""
+    if tok in _CONHECIDAS:
+        return tok
+    if tok in _VARIANTES:
+        return _VARIANTES[tok]
+    if len(tok) < 8:  # 8: uma letra a menos num nome de 9
+        return tok
+    achados = []
+    for nome in _TOLERAVEIS:
+        limite = 2 if len(nome) >= 12 else 1  # "deuteronômio", "tessalonicenses"
+        if abs(len(nome) - len(tok)) <= limite and _distancia(tok, nome) <= limite:
+            achados.append(nome)
+    return achados[0] if len(achados) == 1 else tok  # parecido com dois livros: na dúvida, nenhum
 
 
 def vocabulario():
@@ -169,7 +205,7 @@ class Detector:
 
     def ouvir(self, texto, final, agora):
         """Recebe o texto acumulado da fala atual. Devolve a Referencia quando há citação nova."""
-        toks = normalizar(texto)
+        toks = [_grafia(tok) for tok in normalizar(texto)]
         del self._tempos[len(toks):]
         self._tempos += [agora] * (len(toks) - len(self._tempos))
         todos = [tok for tok, _ in self._cauda] + toks
