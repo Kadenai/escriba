@@ -18,8 +18,11 @@ import holyrics
 from detector import Detector, rotulo
 from digitado import interpretar
 from motores import MOTORES
+from transcricao import DIAS_RETENCAO, limpar_antigas, registrar_fala
 
 CONFIG = Path(os.environ["APPDATA"]) / "Escriba" / "config.json"
+TRANSCRICOES_TEMP = Path(os.environ["APPDATA"]) / "Escriba" / "transcricoes"
+MAX_LINHAS_OUVIDO = 500
 ICONE = Path(getattr(sys, "_MEIPASS", Path(__file__).parent)) / "logo" / "escriba.ico"
 PADRAO = {"motor": "sherpa-onnx", "microfone": "", "modo": "lcv", "confirmar": False,
           "espera": 4, "janela": 3, "principal": "", "retorno": 60, "pasta": "",
@@ -58,7 +61,6 @@ class App:
         self.v = {chave: (tk.BooleanVar if isinstance(padrao, bool) else tk.StringVar)(
             value=salvo.get(chave, padrao)) for chave, padrao in PADRAO.items()}
         self.estado = tk.StringVar()
-        self.ouvido = tk.StringVar()
         self.envio = tk.StringVar()
         self.lido = tk.StringVar()  # como o texto principal foi entendido
         self.digitado = tk.StringVar()  # passagem digitada para enviar na mão
@@ -74,7 +76,10 @@ class App:
         self.principal = None  # (livro, capítulo, versículo) aonde voltar depois de outra citação
         self.volta = None      # temporizador dessa volta
         self.inicio = None     # quando começou a fala em curso, para a transcrição
+        self._em_parcial = False
+        self._ultima_limpeza = None
         self._montar()
+        self._limpar_temporarias()
         for chave, variavel in self.v.items():
             variavel.trace_add("write", self._salvar)
         for chave in ("motor", "microfone"):
@@ -90,8 +95,11 @@ class App:
         self._tique()
 
     def _montar(self):
+        self.raiz.columnconfigure(0, weight=1)
+        self.raiz.rowconfigure(0, weight=1)
         quadro = ttk.Frame(self.raiz, padding=12)
-        quadro.grid()
+        quadro.grid(sticky="nsew")
+        quadro.columnconfigure(1, weight=1)
         ttk.Label(quadro, text="Motor de fala").grid(row=0, column=0, sticky="w")
         ttk.Combobox(quadro, textvariable=self.v["motor"], values=list(MOTORES), state="readonly",
                      width=40).grid(row=0, column=1, sticky="ew", pady=2)
@@ -145,10 +153,13 @@ class App:
 
         if self.v["transcricao"].get():
             linha = ttk.Frame(quadro)
-            linha.grid(row=7, column=0, columnspan=2, sticky="w", pady=(8, 0))
+            linha.grid(row=7, column=0, columnspan=2, sticky="ew", pady=(8, 0))
             ttk.Label(linha, text="Salvar a transcrição em ").pack(side="left")
-            ttk.Entry(linha, textvariable=self.v["pasta"], width=30).pack(side="left")
+            ttk.Entry(linha, textvariable=self.v["pasta"], width=24).pack(
+                side="left", fill="x", expand=True)
             ttk.Button(linha, text="Escolher…", command=self._escolher_pasta).pack(
+                side="left", padx=(4, 0))
+            ttk.Button(linha, text="Temporárias (7d)", command=self._abrir_temporarias).pack(
                 side="left", padx=(4, 0))
 
         rede = ttk.LabelFrame(quadro, text="Holyrics (API Server)", padding=8)
@@ -159,9 +170,25 @@ class App:
             ttk.Entry(rede, textvariable=self.v[chave], width=largura).grid(
                 row=0, column=2 * coluna + 1, padx=(0, 10))
 
-        for linha, variavel in enumerate((self.estado, self.ouvido, self.envio), start=9):
-            ttk.Label(quadro, textvariable=variavel, width=58).grid(row=linha, column=0,
-                                                                    columnspan=2, sticky="w")
+        ttk.Label(quadro, textvariable=self.estado).grid(
+            row=9, column=0, columnspan=2, sticky="ew")
+
+        quadro_ouvido = ttk.LabelFrame(quadro, text="Transcrição em tempo real", padding=6)
+        quadro_ouvido.grid(row=10, column=0, columnspan=2, sticky="nsew", pady=(6, 4))
+        quadro.rowconfigure(10, weight=1)
+        quadro_ouvido.columnconfigure(0, weight=1)
+        quadro_ouvido.rowconfigure(0, weight=1)
+        self.caixa_ouvido = tk.Text(
+            quadro_ouvido, height=8, width=58, wrap="word", state="disabled",
+            font=("Segoe UI", 9))
+        self.caixa_ouvido.tag_configure("parcial", foreground="gray45")
+        rolagem = ttk.Scrollbar(quadro_ouvido, orient="vertical", command=self.caixa_ouvido.yview)
+        self.caixa_ouvido.configure(yscrollcommand=rolagem.set)
+        self.caixa_ouvido.grid(row=0, column=0, sticky="nsew")
+        rolagem.grid(row=0, column=1, sticky="ns")
+
+        ttk.Label(quadro, textvariable=self.envio).grid(
+            row=11, column=0, columnspan=2, sticky="ew")
 
     def _inteiro(self, chave):
         try:
@@ -178,6 +205,16 @@ class App:
         pasta = filedialog.askdirectory(initialdir=self.v["pasta"].get() or None)
         if pasta:
             self.v["pasta"].set(os.path.normpath(pasta))
+
+    def _abrir_temporarias(self):
+        TRANSCRICOES_TEMP.mkdir(parents=True, exist_ok=True)
+        os.startfile(TRANSCRICOES_TEMP)
+
+    def _limpar_temporarias(self):
+        hoje = datetime.now().date()
+        if self._ultima_limpeza != hoje:
+            limpar_antigas(TRANSCRICOES_TEMP, DIAS_RETENCAO, hoje)
+            self._ultima_limpeza = hoje
 
     def _mudar_principal(self, *_):
         texto = self.v["principal"].get().strip()
@@ -231,6 +268,7 @@ class App:
         self._cancelar()
         self.alvo = None
         self.inicio = None  # a frase em curso morreu com o motor
+        self._finalizar_parcial()
         self.detector = Detector(self._inteiro("janela"))
         if self.principal:
             self.detector.situar(*self.principal)
@@ -282,10 +320,39 @@ class App:
         if self.motor and self.motor.pronto.is_set() and self.estado.get().startswith("Carregando"):
             self.estado.set(f"Ouvindo ({self.v['motor'].get()})")
 
+    def _finalizar_parcial(self):
+        if not self._em_parcial:
+            return
+        self.caixa_ouvido.configure(state="normal")
+        self.caixa_ouvido.tag_remove("parcial", "parcial", "end-1c")
+        self.caixa_ouvido.insert("end-1c", "\n")
+        self.caixa_ouvido.configure(state="disabled")
+        self._em_parcial = False
+
+    def _atualizar_ouvido(self, texto, final):
+        hora = f"[{self.inicio:%H:%M:%S}] " if self.inicio else ""
+        self.caixa_ouvido.configure(state="normal")
+        if self._em_parcial:
+            self.caixa_ouvido.delete("parcial", "end-1c")
+        else:
+            self.caixa_ouvido.mark_set("parcial", "end-1c")
+            self.caixa_ouvido.mark_gravity("parcial", "left")
+        if final:
+            self.caixa_ouvido.insert("end-1c", f"{hora}{texto}\n")
+            self._em_parcial = False
+            linhas = int(self.caixa_ouvido.index("end-1c").split(".")[0])
+            if linhas > MAX_LINHAS_OUVIDO:
+                self.caixa_ouvido.delete("1.0", f"{linhas - MAX_LINHAS_OUVIDO}.0")
+        else:
+            self.caixa_ouvido.insert("end-1c", f"{hora}{texto}", ("parcial",))
+            self._em_parcial = True
+        self.caixa_ouvido.see("end")
+        self.caixa_ouvido.configure(state="disabled")
+
     def _ouvido(self, texto, final, quando):
         if texto:
-            self.ouvido.set(f"Ouvido: {texto[-60:]}")
             self.inicio = self.inicio or datetime.now()
+            self._atualizar_ouvido(texto, final)
         if final:
             if texto:
                 self._transcrever(texto)
@@ -309,16 +376,20 @@ class App:
             self._enviar(alvo)
 
     def _transcrever(self, texto):
-        """Acrescenta a fala, com a hora em que começou, ao arquivo do dia."""
-        pasta = self.v["pasta"].get().strip()
-        if not pasta or not self.v["transcricao"].get():
+        """Acrescenta a fala ao histórico temporário (7 dias) e à pasta escolhida, se houver."""
+        if not self.v["transcricao"].get():
             return
+        self._limpar_temporarias()
         try:
-            with open(Path(pasta) / f"Transcrição {self.inicio:%Y-%m-%d}.txt", "a",
-                      encoding="utf-8") as arquivo:
-                arquivo.write(f"[{self.inicio:%H:%M:%S}] {texto}\n")
+            registrar_fala(TRANSCRICOES_TEMP, self.inicio, texto)
         except OSError as erro:
-            self.envio.set(f"Transcrição não gravada: {erro}")
+            self.envio.set(f"Transcrição temporária não gravada: {erro}")
+        pasta = self.v["pasta"].get().strip()
+        if pasta:
+            try:
+                registrar_fala(Path(pasta), self.inicio, texto)
+            except OSError as erro:
+                self.envio.set(f"Transcrição não gravada: {erro}")
 
     def _marcar_volta(self, ref):
         """Citação dentro do texto principal o faz avançar; fora dele, arma a volta."""
@@ -430,8 +501,10 @@ def main():
     raiz = tk.Tk()
     raiz.title("Escriba")
     raiz.iconbitmap(default=ICONE)
-    raiz.resizable(False, False)
+    raiz.resizable(True, True)
     App(raiz)
+    raiz.update_idletasks()
+    raiz.minsize(raiz.winfo_reqwidth(), raiz.winfo_reqheight())
     raiz.mainloop()
 
 

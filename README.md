@@ -10,7 +10,8 @@ passagem pronta no [Holyrics](https://holyrics.com.br), sem ninguém precisar di
   sherpa-onnx (padrão), Vosk e o do Windows.
 - Modos: só o livro, livro e capítulo, livro/capítulo/versículo, ou já projetando.
 - Volta sozinho ao texto principal do sermão depois de outra citação.
-- Grava a transcrição do que foi dito, com a hora de cada frase.
+- Grava a transcrição do que foi dito, com a hora de cada frase, mantendo um histórico temporário de 7 dias em `%APPDATA%\Escriba\transcricoes` (além da pasta escolhida, se houver).
+- Janela redimensionável com painel de transcrição em tempo real com rolagem.
 
 O uso está descrito no manual, gerado por `manual/manual.py`.
 
@@ -65,3 +66,4 @@ Windows e publica o release `v1.2.0` com os dois arquivos. Se esse release já e
 | `biblia.py` | Nomes dos livros e número de versículos por capítulo |
 | `motores.py` | Os três motores de fala |
 | `holyrics.py` | Chamadas ao API Server do Holyrics |
+| `transcricao.py` | Gravação e limpeza automática (7 dias) das transcrições |

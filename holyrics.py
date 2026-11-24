@@ -29,4 +29,4 @@ def selecionar(host, porta, token, livro, capitulo=None, versiculo=None):
 
 def projetar(host, porta, token, livro, capitulo, versiculo, fim=None):
     ids = [_id(livro, capitulo, v) for v in range(versiculo, (fim or versiculo) + 1)]
-    chamar(host, porta, token, "ShowVerse", {"ids": ids})
+    chamar(host, porta, token, "ShowVerse", {"input": {"ids": ids}})
